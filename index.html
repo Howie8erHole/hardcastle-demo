@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hardcastle — Password Manager Demo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        hc: {
+          900: '#0a0f1a',
+          800: '#0f172a',
+          700: '#1e293b',
+          600: '#334155',
+          500: '#475569',
+          400: '#64748b',
+          accent: '#3b82f6',
+          gold: '#f59e0b',
+          green: '#10b981',
+          red: '#ef4444',
+          orange: '#f97316',
+        }
+      }
+    }
+  }
+}
+</script>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #0a0f1a; color: #e2e8f0; margin: 0; }
+  .sidebar-item { transition: all 0.15s ease; cursor: pointer; }
+  .sidebar-item:hover { background: rgba(59,130,246,0.1); }
+  .sidebar-item.active { background: rgba(59,130,246,0.15); border-left: 2px solid #3b82f6; }
+  .card { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; }
+  .btn-primary { background: #3b82f6; color: white; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #1e293b; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 14px; transition: all 0.15s; }
+  .btn-ghost:hover { background: #1e293b; color: #e2e8f0; }
+  .btn-danger { background: #ef4444; color: white; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.15s; }
+  .badge-red { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  .badge-orange { background: rgba(249,115,22,0.15); color: #f97316; border: 1px solid rgba(249,115,22,0.3); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  .badge-yellow { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  .badge-blue { background: rgba(59,130,246,0.15); color: #3b82f6; border: 1px solid rgba(59,130,246,0.3); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  .input-field { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 14px; color: #e2e8f0; font-size: 14px; width: 100%; outline: none; transition: border 0.15s; }
+  .input-field:focus { border-color: #3b82f6; }
+  .toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #334155; border-radius: 24px; transition: 0.3s; }
+  .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+  input:checked + .toggle-slider { background: #3b82f6; }
+  input:checked + .toggle-slider:before { transform: translateX(20px); }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .modal { background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 32px; max-width: 540px; width: 90%; max-height: 90vh; overflow-y: auto; }
+  .remediation-step { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 8px; margin-bottom: 8px; background: #1e293b; }
+  .remediation-step.active { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); }
+  .remediation-step.done { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); }
+  .step-num { width: 24px; height: 24px; border-radius: 50%; background: #334155; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .step-num.active { background: #3b82f6; }
+  .step-num.done { background: #10b981; }
+  .browser-bar { background: #1e293b; border-radius: 8px; padding: 8px 14px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748b; }
+  .browser-content { background: #0a0f1a; border-radius: 8px; padding: 16px; min-height: 120px; font-size: 12px; color: #64748b; font-family: monospace; }
+  .totp-code { font-size: 28px; font-weight: 700; letter-spacing: 6px; color: #3b82f6; font-family: monospace; }
+  .totp-timer { width: 100%; height: 4px; background: #1e293b; border-radius: 2px; overflow: hidden; }
+  .totp-timer-bar { height: 100%; background: #3b82f6; border-radius: 2px; animation: countdown 30s linear infinite; }
+  @keyframes countdown { from { width: 100%; } to { width: 0%; } }
+  .pulse { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .typing { overflow: hidden; white-space: nowrap; animation: typing 2s steps(30, end) forwards; }
+  @keyframes typing { from { width: 0; } to { width: 100%; } }
+  .screen { display: none; }
+  .screen.active { display: flex; }
+  .credential-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; cursor: pointer; transition: background 0.15s; border: 1px solid transparent; }
+  .credential-row:hover { background: #1e293b; border-color: #334155; }
+  .site-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .health-score-ring { width: 80px; height: 80px; }
+  .tab-btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; color: #64748b; background: transparent; border: none; }
+  .tab-btn.active { background: #1e293b; color: #e2e8f0; }
+  .notification-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; }
+  .demo-banner { background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1)); border: 1px solid rgba(59,130,246,0.2); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: #94a3b8; }
+  .progress-bar { height: 6px; background: #1e293b; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     AUTH SCREEN
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="screen-auth" class="screen active" style="min-height:100vh; align-items:center; justify-content:center; padding:24px;">
+  <div style="width:100%; max-width:420px;">
+    <!-- Logo -->
+    <div style="text-align:center; margin-bottom:32px;">
+      <div style="display:inline-flex; align-items:center; gap:10px; margin-bottom:12px;">
+        <div style="width:44px; height:44px; background:linear-gradient(135deg,#3b82f6,#8b5cf6); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <span style="font-size:24px; font-weight:700; color:#e2e8f0;">Hardcastle</span>
+      </div>
+      <p style="color:#64748b; font-size:14px; margin:0;">Security that acts. The only password manager<br>that doesn't just warn you — it fixes breaches with you.</p>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex; background:#0f172a; border-radius:10px; padding:4px; margin-bottom:24px; border:1px solid #1e293b;">
+      <button class="tab-btn active" id="tab-login" onclick="switchAuthTab('login')" style="flex:1;">Sign In</button>
+      <button class="tab-btn" id="tab-register" onclick="switchAuthTab('register')" style="flex:1;">Create Account</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="auth-login" class="card" style="padding:24px;">
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:6px;">Email Address</label>
+        <input class="input-field" type="email" placeholder="you@example.com" value="jonathan@assessllc.com">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:6px;">Master Password</label>
+        <input class="input-field" type="password" placeholder="••••••••••••" value="••••••••••••••••">
+      </div>
+      <button class="btn-primary" style="width:100%; padding:12px;" onclick="goToVault()">Unlock Vault</button>
+      <p style="text-align:center; margin-top:16px; font-size:12px; color:#475569;">
+        <a href="#" style="color:#3b82f6;">Forgot password?</a>
+      </p>
+    </div>
+
+    <!-- Register Form (hidden) -->
+    <div id="auth-register" class="card" style="padding:24px; display:none;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+        <div>
+          <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:6px;">First Name</label>
+          <input class="input-field" placeholder="Jonathan">
+        </div>
+        <div>
+          <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:6px;">Last Name</label>
+          <input class="input-field" placeholder="Butler">
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:6px;">Email Address</label>
+        <input class="input-field" type="email" placeholder="you@example.com">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:6px;">Master Password</label>
+        <input class="input-field" type="password" placeholder="Create a strong master password">
+      </div>
+      <button class="btn-primary" style="width:100%; padding:12px;" onclick="goToVault()">Create Account</button>
+    </div>
+
+    <p style="text-align:center; margin-top:20px; font-size:12px; color:#334155;">
+      🔒 Zero-knowledge encryption · Your data never leaves your device unencrypted
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MAIN APP SHELL
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="screen-app" class="screen" style="min-height:100vh; flex-direction:row;">
+
+  <!-- Sidebar -->
+  <div style="width:220px; background:#0f172a; border-right:1px solid #1e293b; display:flex; flex-direction:column; flex-shrink:0;">
+    <!-- Logo -->
+    <div style="padding:20px 16px 16px; border-bottom:1px solid #1e293b;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div style="width:32px; height:32px; background:linear-gradient(135deg,#3b82f6,#8b5cf6); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <span style="font-size:16px; font-weight:700; color:#e2e8f0;">Hardcastle</span>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav style="flex:1; padding:12px 8px; display:flex; flex-direction:column; gap:2px;">
+      <div class="sidebar-item active" id="nav-vault" onclick="showPage('vault')" style="padding:10px 12px; border-radius:8px; display:flex; align-items:center; gap:10px; font-size:14px; color:#e2e8f0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        My Vault
+      </div>
+      <div class="sidebar-item" id="nav-security" onclick="showPage('security')" style="padding:10px 12px; border-radius:8px; display:flex; align-items:center; gap:10px; font-size:14px; color:#94a3b8;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Security
+        <span class="notification-dot" style="margin-left:auto;"></span>
+      </div>
+      <div class="sidebar-item" id="nav-authenticator" onclick="showPage('authenticator')" style="padding:10px 12px; border-radius:8px; display:flex; align-items:center; gap:10px; font-size:14px; color:#94a3b8;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        Authenticator
+      </div>
+      <div class="sidebar-item" id="nav-phone" onclick="showPage('phone')" style="padding:10px 12px; border-radius:8px; display:flex; align-items:center; gap:10px; font-size:14px; color:#94a3b8;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.44 2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.5 16.92z"/></svg>
+        Phone Guard
+      </div>
+      <div class="sidebar-item" id="nav-settings" onclick="showPage('settings')" style="padding:10px 12px; border-radius:8px; display:flex; align-items:center; gap:10px; font-size:14px; color:#94a3b8;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </div>
+    </nav>
+
+    <!-- User -->
+    <div style="padding:12px 16px; border-top:1px solid #1e293b; display:flex; align-items:center; gap:10px;">
+      <div style="width:32px; height:32px; background:linear-gradient(135deg,#3b82f6,#8b5cf6); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:white; flex-shrink:0;">JB</div>
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:13px; font-weight:500; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Jonathan Butler</div>
+        <div style="font-size:11px; color:#475569;">Pro Plan</div>
+      </div>
+      <button onclick="goToAuth()" style="background:none; border:none; cursor:pointer; color:#475569; padding:4px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column;">
+
+    <!-- ── VAULT PAGE ──────────────────────────────────────────────────────── -->
+    <div id="page-vault" style="flex:1; padding:28px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+        <div>
+          <h1 style="font-size:22px; font-weight:700; color:#e2e8f0; margin:0 0 4px;">My Vault</h1>
+          <p style="font-size:13px; color:#64748b; margin:0;">47 items · all encrypted · last synced just now</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-ghost" style="font-size:13px;" onclick="showImportModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline; margin-right:6px; vertical-align:middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Import
+          </button>
+          <button class="btn-primary" onclick="showAddModal()">+ Add Item</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px;">
+        <div class="card" style="padding:16px;">
+          <div style="font-size:24px; font-weight:700; color:#e2e8f0;">47</div>
+          <div style="font-size:12px; color:#64748b; margin-top:2px;">Total Items</div>
+        </div>
+        <div class="card" style="padding:16px; cursor:pointer;" onclick="showPage('security')">
+          <div style="font-size:24px; font-weight:700; color:#ef4444;">3</div>
+          <div style="font-size:12px; color:#64748b; margin-top:2px;">Compromised</div>
+        </div>
+        <div class="card" style="padding:16px; cursor:pointer;" onclick="showPage('security')">
+          <div style="font-size:24px; font-weight:700; color:#f97316;">8</div>
+          <div style="font-size:12px; color:#64748b; margin-top:2px;">Weak / Reused</div>
+        </div>
+        <div class="card" style="padding:16px;">
+          <div style="font-size:24px; font-weight:700; color:#10b981;">36</div>
+          <div style="font-size:12px; color:#64748b; margin-top:2px;">Secured</div>
+        </div>
+      </div>
+
+      <!-- Search & Filter -->
+      <div style="display:flex; gap:10px; margin-bottom:16px;">
+        <div style="flex:1; position:relative;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" style="position:absolute; left:12px; top:50%; transform:translateY(-50%);"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="input-field" placeholder="Search vault..." style="padding-left:40px;">
+        </div>
+        <select class="input-field" style="width:140px;">
+          <option>All Categories</option>
+          <option>Logins</option>
+          <option>Finance</option>
+          <option>Social</option>
+          <option>Work</option>
+        </select>
+      </div>
+
+      <!-- Credential List -->
+      <div class="card" style="overflow:hidden;">
+        <!-- Compromised Banner -->
+        <div style="background:rgba(239,68,68,0.08); border-bottom:1px solid rgba(239,68,68,0.2); padding:12px 16px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span style="font-size:13px; color:#ef4444; font-weight:500;">3 compromised passwords detected</span>
+          </div>
+          <button class="btn-danger" style="font-size:12px; padding:6px 14px;" onclick="showRemediationModal()">Fix All with AI</button>
+        </div>
+
+        <!-- Items -->
+        <div style="padding:8px;">
+          <div class="credential-row" onclick="showCredentialDetail('google')">
+            <div class="site-icon" style="background:rgba(239,68,68,0.1);">🔴</div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500; color:#e2e8f0;">Google</div>
+              <div style="font-size:12px; color:#64748b;">jonathan@gmail.com</div>
+            </div>
+            <span class="badge-red">Compromised</span>
+          </div>
+          <div class="credential-row" onclick="showCredentialDetail('facebook')">
+            <div class="site-icon" style="background:rgba(59,130,246,0.1);">🔵</div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500; color:#e2e8f0;">Facebook</div>
+              <div style="font-size:12px; color:#64748b;">jonathan@gmail.com</div>
+            </div>
+            <span class="badge-red">Compromised</span>
+          </div>
+          <div class="credential-row" onclick="showCredentialDetail('twitter')">
+            <div class="site-icon" style="background:rgba(29,161,242,0.1);">🐦</div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500; color:#e2e8f0;">X / Twitter</div>
+              <div style="font-size:12px; color:#64748b;">@jbutler_molokai</div>
+            </div>
+            <span class="badge-orange">Weak</span>
+          </div>
+          <div class="credential-row">
+            <div class="site-icon" style="background:rgba(16,185,129,0.1);">💳</div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500; color:#e2e8f0;">Bank of Hawaii</div>
+              <div style="font-size:12px; color:#64748b;">jbutler_hawaii</div>
+            </div>
+            <span class="badge-green">Secured</span>
+          </div>
+          <div class="credential-row">
+            <div class="site-icon" style="background:rgba(245,158,11,0.1);">📚</div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500; color:#e2e8f0;">UHMC Student Portal</div>
+              <div style="font-size:12px; color:#64748b;">jbutler@hawaii.edu</div>
+            </div>
+            <span class="badge-green">Secured</span>
+          </div>
+          <div class="credential-row">
+            <div class="site-icon" style="background:rgba(139,92,246,0.1);">🛒</div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500; color:#e2e8f0;">Amazon</div>
+              <div style="font-size:12px; color:#64748b;">jonathan@assessllc.com</div>
+            </div>
+            <span class="badge-yellow">Reused</span>
+          </div>
+          <div class="credential-row">
+            <div class="site-icon" style="background:rgba(59,130,246,0.1);">💼</div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500; color:#e2e8f0;">LinkedIn</div>
+              <div style="font-size:12px; color:#64748b;">jonathan@assessllc.com</div>
+            </div>
+            <span class="badge-green">Secured</span>
+          </div>
+          <div style="text-align:center; padding:12px; color:#475569; font-size:13px;">
+            + 40 more items · <a href="#" style="color:#3b82f6;" onclick="return false;">View all</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECURITY PAGE ───────────────────────────────────────────────────── -->
+    <div id="page-security" style="flex:1; padding:28px; display:none;">
+      <div style="margin-bottom:24px;">
+        <h1 style="font-size:22px; font-weight:700; color:#e2e8f0; margin:0 0 4px;">Security Dashboard</h1>
+        <p style="font-size:13px; color:#64748b; margin:0;">Your vault health at a glance</p>
+      </div>
+
+      <!-- Health Score -->
+      <div class="card" style="padding:24px; margin-bottom:16px; display:flex; align-items:center; gap:24px;">
+        <div style="text-align:center; flex-shrink:0;">
+          <div style="font-size:52px; font-weight:800; color:#f97316; line-height:1;">62</div>
+          <div style="font-size:12px; color:#64748b; margin-top:4px;">Security Score</div>
+          <div style="font-size:11px; color:#f97316; font-weight:600; margin-top:2px;">NEEDS ATTENTION</div>
+        </div>
+        <div style="flex:1;">
+          <div style="margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:#94a3b8; margin-bottom:4px;"><span>Compromised</span><span style="color:#ef4444;">3 accounts</span></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:6%; background:#ef4444;"></div></div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:#94a3b8; margin-bottom:4px;"><span>Weak Passwords</span><span style="color:#f97316;">5 accounts</span></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:11%; background:#f97316;"></div></div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:#94a3b8; margin-bottom:4px;"><span>Reused Passwords</span><span style="color:#f59e0b;">3 accounts</span></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:6%; background:#f59e0b;"></div></div>
+          </div>
+          <div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:#94a3b8; margin-bottom:4px;"><span>Secured</span><span style="color:#10b981;">36 accounts</span></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:77%; background:#10b981;"></div></div>
+          </div>
+        </div>
+        <div style="flex-shrink:0;">
+          <button class="btn-danger" onclick="showRemediationModal()" style="padding:12px 20px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline; margin-right:6px; vertical-align:middle;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Fix All Issues
+          </button>
+        </div>
+      </div>
+
+      <!-- Issues List -->
+      <div class="card" style="overflow:hidden;">
+        <div style="padding:16px 20px; border-bottom:1px solid #1e293b; font-size:14px; font-weight:600; color:#e2e8f0;">Issues Requiring Action</div>
+        <div style="padding:8px;">
+          <div class="credential-row" onclick="showRemediationModal()">
+            <div style="width:36px; height:36px; background:rgba(239,68,68,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500; color:#e2e8f0;">Google — Compromised in data breach</div>
+              <div style="font-size:12px; color:#64748b;">Detected via HaveIBeenPwned · 2 days ago</div>
+            </div>
+            <button class="btn-danger" style="font-size:12px; padding:6px 12px;" onclick="event.stopPropagation(); showRemediationModal()">Fix Now</button>
+          </div>
+          <div class="credential-row" onclick="showRemediationModal()">
+            <div style="width:36px; height:36px; background:rgba(239,68,68,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500; color:#e2e8f0;">Facebook — Compromised in data breach</div>
+              <div style="font-size:12px; color:#64748b;">Detected via HaveIBeenPwned · 2 days ago</div>
+            </div>
+            <button class="btn-danger" style="font-size:12px; padding:6px 12px;" onclick="event.stopPropagation(); showRemediationModal()">Fix Now</button>
+          </div>
+          <div class="credential-row">
+            <div style="width:36px; height:36px; background:rgba(249,115,22,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500; color:#e2e8f0;">X / Twitter — Weak password</div>
+              <div style="font-size:12px; color:#64748b;">Password is too short and lacks special characters</div>
+            </div>
+            <button class="btn-ghost" style="font-size:12px; padding:6px 12px;" onclick="showRemediationModal()">Fix Now</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AUTHENTICATOR PAGE ─────────────────────────────────────────────── -->
+    <div id="page-authenticator" style="flex:1; padding:28px; display:none;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+        <div>
+          <h1 style="font-size:22px; font-weight:700; color:#e2e8f0; margin:0 0 4px;">Authenticator</h1>
+          <p style="font-size:13px; color:#64748b; margin:0;">Your one-stop 2FA hub · replaces Google Authenticator, Authy, and all others</p>
+        </div>
+        <button class="btn-primary" onclick="showAddTOTPModal()">+ Add Account</button>
+      </div>
+
+      <div class="demo-banner" style="margin-bottom:20px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" style="display:inline; margin-right:6px; vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Hardcastle replaces your standalone authenticator app entirely. TOTP codes, passkeys, backup codes — all in one place. When you import your vault, your 2FA methods come with it.
+      </div>
+
+      <!-- TOTP Cards -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
+        <div class="card" style="padding:20px;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+            <div style="width:36px; height:36px; background:rgba(239,68,68,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">🔴</div>
+            <div>
+              <div style="font-size:14px; font-weight:600; color:#e2e8f0;">Google</div>
+              <div style="font-size:11px; color:#64748b;">jonathan@gmail.com</div>
+            </div>
+          </div>
+          <div class="totp-code" id="totp-google">483 291</div>
+          <div style="margin-top:8px;">
+            <div class="totp-timer"><div class="totp-timer-bar"></div></div>
+          </div>
+          <div style="font-size:11px; color:#64748b; margin-top:6px;">Refreshes in <span id="totp-timer-text">18s</span></div>
+        </div>
+        <div class="card" style="padding:20px;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+            <div style="width:36px; height:36px; background:rgba(59,130,246,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">🔵</div>
+            <div>
+              <div style="font-size:14px; font-weight:600; color:#e2e8f0;">Facebook</div>
+              <div style="font-size:11px; color:#64748b;">jonathan@gmail.com</div>
+            </div>
+          </div>
+          <div class="totp-code">719 043</div>
+          <div style="margin-top:8px;">
+            <div class="totp-timer"><div class="totp-timer-bar" style="animation-delay:-12s;"></div></div>
+          </div>
+          <div style="font-size:11px; color:#64748b; margin-top:6px;">Refreshes in 6s</div>
+        </div>
+        <div class="card" style="padding:20px;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+            <div style="width:36px; height:36px; background:rgba(16,185,129,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">💳</div>
+            <div>
+              <div style="font-size:14px; font-weight:600; color:#e2e8f0;">Bank of Hawaii</div>
+              <div style="font-size:11px; color:#64748b;">jbutler_hawaii</div>
+            </div>
+          </div>
+          <div class="totp-code">256 817</div>
+          <div style="margin-top:8px;">
+            <div class="totp-timer"><div class="totp-timer-bar" style="animation-delay:-5s;"></div></div>
+          </div>
+          <div style="font-size:11px; color:#64748b; margin-top:6px;">Refreshes in 25s</div>
+        </div>
+        <div class="card" style="padding:20px; border:2px dashed #1e293b; display:flex; align-items:center; justify-content:center; cursor:pointer; min-height:140px;" onclick="showAddTOTPModal()">
+          <div style="text-align:center; color:#475569;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:block; margin:0 auto 8px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <div style="font-size:13px;">Add Account</div>
+            <div style="font-size:11px; margin-top:2px;">Scan QR or enter key</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Passkeys Section -->
+      <div style="margin-top:24px;">
+        <h2 style="font-size:16px; font-weight:600; color:#e2e8f0; margin:0 0 12px;">Passkeys</h2>
+        <div class="card" style="padding:16px; display:flex; align-items:center; gap:12px;">
+          <div style="width:36px; height:36px; background:rgba(139,92,246,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">🔑</div>
+          <div style="flex:1;">
+            <div style="font-size:14px; font-weight:500; color:#e2e8f0;">GitHub</div>
+            <div style="font-size:12px; color:#64748b;">Passkey · Created Jan 2025</div>
+          </div>
+          <span class="badge-blue">Passkey</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PHONE GUARD PAGE ───────────────────────────────────────────────── -->
+    <div id="page-phone" style="flex:1; padding:28px; display:none;">
+      <div style="margin-bottom:24px;">
+        <h1 style="font-size:22px; font-weight:700; color:#e2e8f0; margin:0 0 4px;">Phone Number Guard</h1>
+        <p style="font-size:13px; color:#64748b; margin:0;">Protect every account tied to your phone number before you lose access</p>
+      </div>
+
+      <div class="demo-banner" style="margin-bottom:20px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" style="display:inline; margin-right:6px; vertical-align:middle;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Changing carriers or phone numbers? Hardcastle scans your entire vault and identifies every account that uses your current number for 2FA or recovery — before you lose access.
+      </div>
+
+      <div class="card" style="padding:20px; margin-bottom:16px;">
+        <div style="font-size:14px; font-weight:600; color:#e2e8f0; margin-bottom:12px;">Current Phone Number</div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input class="input-field" value="+1 (808) 555-0192" style="flex:1;">
+          <button class="btn-primary" onclick="showPhoneScanResult()">Scan Vault</button>
+        </div>
+      </div>
+
+      <div id="phone-scan-result" style="display:none;">
+        <div class="card" style="overflow:hidden;">
+          <div style="padding:16px 20px; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between;">
+            <div style="font-size:14px; font-weight:600; color:#e2e8f0;">12 accounts use this number</div>
+            <span class="badge-orange">Action Required</span>
+          </div>
+          <div style="padding:8px;">
+            <div class="credential-row">
+              <div class="site-icon" style="background:rgba(239,68,68,0.1);">🔴</div>
+              <div style="flex:1;"><div style="font-size:14px; font-weight:500; color:#e2e8f0;">Google</div><div style="font-size:12px; color:#64748b;">Recovery phone · 2FA backup</div></div>
+              <span class="badge-red">High Priority</span>
+            </div>
+            <div class="credential-row">
+              <div class="site-icon" style="background:rgba(59,130,246,0.1);">🔵</div>
+              <div style="flex:1;"><div style="font-size:14px; font-weight:500; color:#e2e8f0;">Facebook</div><div style="font-size:12px; color:#64748b;">2FA method</div></div>
+              <span class="badge-red">High Priority</span>
+            </div>
+            <div class="credential-row">
+              <div class="site-icon" style="background:rgba(16,185,129,0.1);">💳</div>
+              <div style="flex:1;"><div style="font-size:14px; font-weight:500; color:#e2e8f0;">Bank of Hawaii</div><div style="font-size:12px; color:#64748b;">SMS verification</div></div>
+              <span class="badge-red">High Priority</span>
+            </div>
+            <div style="text-align:center; padding:12px; color:#475569; font-size:13px;">+ 9 more accounts</div>
+          </div>
+          <div style="padding:16px; border-top:1px solid #1e293b;">
+            <button class="btn-primary" style="width:100%;">Start Guided Update Flow</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS PAGE ──────────────────────────────────────────────────── -->
+    <div id="page-settings" style="flex:1; padding:28px; display:none;">
+      <div style="margin-bottom:24px;">
+        <h1 style="font-size:22px; font-weight:700; color:#e2e8f0; margin:0 0 4px;">Settings</h1>
+        <p style="font-size:13px; color:#64748b; margin:0;">Configure Hardcastle to work exactly the way you want</p>
+      </div>
+
+      <div style="display:grid; gap:16px;">
+        <!-- AI Remediation Mode -->
+        <div class="card" style="padding:24px;">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px;">
+            <div>
+              <div style="font-size:16px; font-weight:600; color:#e2e8f0; margin-bottom:4px;">AI Remediation Mode</div>
+              <div style="font-size:13px; color:#64748b;">Control how Hardcastle handles password changes on your behalf</div>
+            </div>
+          </div>
+          <div style="display:grid; gap:12px;">
+            <div style="padding:16px; border-radius:10px; border:2px solid #3b82f6; background:rgba(59,130,246,0.05); cursor:pointer;" id="mode-auto" onclick="selectMode('auto')">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                <div style="font-size:14px; font-weight:600; color:#e2e8f0;">Auto Mode</div>
+                <span class="badge-blue">Recommended · Active</span>
+              </div>
+              <div style="font-size:13px; color:#94a3b8;">Hardcastle handles everything automatically. It opens the affected site in its secure in-app browser, changes the password, and updates your vault — without you lifting a finger. Only pauses if a CAPTCHA requires human input.</div>
+            </div>
+            <div style="padding:16px; border-radius:10px; border:1px solid #1e293b; cursor:pointer;" id="mode-supervised" onclick="selectMode('supervised')">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                <div style="font-size:14px; font-weight:600; color:#e2e8f0;">Supervised Mode</div>
+                <span class="badge-yellow">Manual Approval</span>
+              </div>
+              <div style="font-size:13px; color:#94a3b8;">Hardcastle prepares everything and navigates to the password change page, but pauses and asks for your approval before submitting any change on any site. You stay in full control of every action.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="card" style="padding:24px;">
+          <div style="font-size:16px; font-weight:600; color:#e2e8f0; margin-bottom:16px;">Notifications</div>
+          <div style="display:grid; gap:14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-size:14px; color:#e2e8f0;">Breach Alerts</div>
+                <div style="font-size:12px; color:#64748b;">System notification when a password is found in a data breach</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-size:14px; color:#e2e8f0;">New Login Detected</div>
+                <div style="font-size:12px; color:#64748b;">Prompt to save when a new password is used on a site</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-size:14px; color:#e2e8f0;">Phone Number Detected for 2FA</div>
+                <div style="font-size:12px; color:#64748b;">Ask to save when a phone number is used as a one-time passcode</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-size:14px; color:#e2e8f0;">Weekly Security Report</div>
+                <div style="font-size:12px; color:#64748b;">Email summary of your vault health every Monday</div>
+              </div>
+              <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Autofill & Browser -->
+        <div class="card" style="padding:24px;">
+          <div style="font-size:16px; font-weight:600; color:#e2e8f0; margin-bottom:16px;">Autofill & Browser Extension</div>
+          <div style="display:grid; gap:14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-size:14px; color:#e2e8f0;">Autofill Credentials</div>
+                <div style="font-size:12px; color:#64748b;">Automatically fill username and password on recognized sites</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-size:14px; color:#e2e8f0;">Autosave New Passwords</div>
+                <div style="font-size:12px; color:#64748b;">Prompt to save when you create a new account or change a password</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-size:14px; color:#e2e8f0;">Set as Default Password Manager</div>
+                <div style="font-size:12px; color:#64748b;">Replace Chrome's built-in password manager with Hardcastle</div>
+              </div>
+              <button class="btn-primary" style="font-size:12px; padding:6px 14px;">Set Default</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security -->
+        <div class="card" style="padding:24px;">
+          <div style="font-size:16px; font-weight:600; color:#e2e8f0; margin-bottom:16px;">Vault Security</div>
+          <div style="display:grid; gap:14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-size:14px; color:#e2e8f0;">Auto-Lock Vault</div>
+                <div style="font-size:12px; color:#64748b;">Lock after 15 minutes of inactivity</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-size:14px; color:#e2e8f0;">Biometric Unlock</div>
+                <div style="font-size:12px; color:#64748b;">Use Face ID or fingerprint to unlock on mobile</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end main content -->
+</div><!-- end app shell -->
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MODALS
+═══════════════════════════════════════════════════════════════════════════ -->
+
+<!-- AI Remediation Modal -->
+<div id="modal-remediation" style="display:none;" class="modal-overlay" onclick="if(event.target===this && remediationStep===0)closeModal('modal-remediation')">
+  <div class="modal" style="max-width:600px;">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+      <div style="width:40px; height:40px; background:linear-gradient(135deg,#3b82f6,#8b5cf6); border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div>
+        <div style="font-size:18px; font-weight:700; color:#e2e8f0;">AI Remediation</div>
+        <div style="font-size:13px; color:#64748b;">Hardcastle will fix your compromised passwords automatically</div>
+      </div>
+    </div>
+
+    <!-- Pre-start state -->
+    <div id="remediation-prestart">
+      <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:10px; padding:16px; margin-bottom:20px;">
+        <div style="font-size:13px; font-weight:600; color:#ef4444; margin-bottom:8px;">3 accounts need immediate attention</div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:#94a3b8;">🔴 <span>Google — Compromised in data breach</span></div>
+          <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:#94a3b8;">🔵 <span>Facebook — Compromised in data breach</span></div>
+          <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:#94a3b8;">🐦 <span>X / Twitter — Weak password</span></div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <div style="font-size:13px; font-weight:600; color:#e2e8f0; margin-bottom:10px;">Remediation Mode</div>
+        <div style="display:grid; gap:8px;">
+          <div style="padding:12px; border-radius:8px; border:2px solid #3b82f6; background:rgba(59,130,246,0.05); display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <div style="width:16px; height:16px; border-radius:50%; background:#3b82f6; flex-shrink:0;"></div>
+            <div>
+              <div style="font-size:13px; font-weight:600; color:#e2e8f0;">Auto Mode</div>
+              <div style="font-size:12px; color:#64748b;">Hardcastle handles everything. You only step in for CAPTCHAs.</div>
+            </div>
+          </div>
+          <div style="padding:12px; border-radius:8px; border:1px solid #1e293b; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="this.style.border='2px solid #f59e0b'; document.querySelectorAll('#remediation-prestart > div:nth-child(2) > div > div')[0].style.border='1px solid #1e293b'">
+            <div style="width:16px; height:16px; border-radius:50%; border:2px solid #475569; flex-shrink:0;"></div>
+            <div>
+              <div style="font-size:13px; font-weight:600; color:#e2e8f0;">Supervised Mode</div>
+              <div style="font-size:12px; color:#64748b;">Hardcastle prepares everything, you approve each change.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <button class="btn-ghost" style="flex:1;" onclick="closeModal('modal-remediation')">Cancel</button>
+        <button class="btn-primary" style="flex:2; padding:12px;" onclick="startRemediation()">
+          Start AI Remediation
+        </button>
+      </div>
+    </div>
+
+    <!-- Running state -->
+    <div id="remediation-running" style="display:none;">
+      <div id="remediation-steps">
+        <div class="remediation-step active" id="step-1">
+          <div class="step-num active" id="stepnum-1">1</div>
+          <div style="flex:1;">
+            <div style="font-size:13px; font-weight:600; color:#e2e8f0;">Google — Changing password</div>
+            <div style="font-size:12px; color:#64748b; margin-top:2px;" id="step-1-status">Opening accounts.google.com in secure browser...</div>
+          </div>
+          <div id="step-1-badge"><span class="badge-blue pulse">In Progress</span></div>
+        </div>
+        <div class="remediation-step" id="step-2">
+          <div class="step-num" id="stepnum-2">2</div>
+          <div style="flex:1;">
+            <div style="font-size:13px; font-weight:600; color:#94a3b8;">Facebook — Changing password</div>
+            <div style="font-size:12px; color:#475569; margin-top:2px;">Waiting...</div>
+          </div>
+          <div id="step-2-badge"><span class="badge-yellow">Queued</span></div>
+        </div>
+        <div class="remediation-step" id="step-3">
+          <div class="step-num" id="stepnum-3">3</div>
+          <div style="flex:1;">
+            <div style="font-size:13px; font-weight:600; color:#94a3b8;">X / Twitter — Strengthening password</div>
+            <div style="font-size:12px; color:#475569; margin-top:2px;">Waiting...</div>
+          </div>
+          <div id="step-3-badge"><span class="badge-yellow">Queued</span></div>
+        </div>
+      </div>
+
+      <!-- Simulated Browser -->
+      <div style="margin-top:20px; border:1px solid #1e293b; border-radius:10px; overflow:hidden;" id="sim-browser">
+        <div class="browser-bar">
+          <div style="display:flex; gap:4px;">
+            <div style="width:10px; height:10px; border-radius:50%; background:#ef4444;"></div>
+            <div style="width:10px; height:10px; border-radius:50%; background:#f59e0b;"></div>
+            <div style="width:10px; height:10px; border-radius:50%; background:#10b981;"></div>
+          </div>
+          <div style="flex:1; background:#0a0f1a; border-radius:4px; padding:4px 10px; font-size:12px; color:#64748b; display:flex; align-items:center; gap:6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span id="browser-url">accounts.google.com/security/password</span>
+          </div>
+        </div>
+        <div class="browser-content" id="browser-content">
+          <div style="color:#94a3b8; font-size:12px;" id="browser-log">
+            > Navigating to Google account security page...<br>
+            > Page loaded successfully<br>
+            > Locating password change form...<br>
+          </div>
+        </div>
+      </div>
+
+      <!-- CAPTCHA Intercept (hidden) -->
+      <div id="captcha-intercept" style="display:none; margin-top:16px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.3); border-radius:10px; padding:16px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span style="font-size:13px; font-weight:600; color:#f59e0b;">Human verification required</span>
+        </div>
+        <p style="font-size:12px; color:#94a3b8; margin:0 0 12px;">Facebook requires a CAPTCHA to proceed. Hardcastle has paused and is waiting for you to complete it.</p>
+        <button class="btn-primary" style="font-size:13px;" onclick="completeCaptcha()">I've Completed the CAPTCHA →</button>
+      </div>
+    </div>
+
+    <!-- Done state -->
+    <div id="remediation-done" style="display:none; text-align:center; padding:20px 0;">
+      <div style="width:64px; height:64px; background:rgba(16,185,129,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div style="font-size:20px; font-weight:700; color:#e2e8f0; margin-bottom:8px;">All Done!</div>
+      <p style="font-size:14px; color:#64748b; margin:0 0 20px;">3 passwords changed. Your vault is updated. Chrome autofill will use the new passwords automatically.</p>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:24px;">
+        <div style="background:#1e293b; border-radius:8px; padding:12px; text-align:center;">
+          <div style="font-size:20px; font-weight:700; color:#10b981;">3</div>
+          <div style="font-size:11px; color:#64748b;">Fixed</div>
+        </div>
+        <div style="background:#1e293b; border-radius:8px; padding:12px; text-align:center;">
+          <div style="font-size:20px; font-weight:700; color:#3b82f6;">0</div>
+          <div style="font-size:11px; color:#64748b;">Failed</div>
+        </div>
+        <div style="background:#1e293b; border-radius:8px; padding:12px; text-align:center;">
+          <div style="font-size:20px; font-weight:700; color:#e2e8f0;">~2 min</div>
+          <div style="font-size:11px; color:#64748b;">Time Saved</div>
+        </div>
+      </div>
+      <button class="btn-primary" style="padding:12px 32px;" onclick="closeModal('modal-remediation'); resetRemediation()">Back to Vault</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Item Modal -->
+<div id="modal-add" style="display:none;" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-add')">
+  <div class="modal">
+    <div style="font-size:18px; font-weight:700; color:#e2e8f0; margin-bottom:20px;">Add to Vault</div>
+    <div style="display:grid; gap:14px; margin-bottom:20px;">
+      <div>
+        <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:6px;">Site Name *</label>
+        <input class="input-field" placeholder="e.g. Netflix">
+      </div>
+      <div>
+        <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:6px;">Website URL</label>
+        <input class="input-field" placeholder="https://netflix.com">
+      </div>
+      <div>
+        <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:6px;">Username / Email *</label>
+        <input class="input-field" placeholder="your@email.com">
+      </div>
+      <div>
+        <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:6px;">Password *</label>
+        <div style="display:flex; gap:8px;">
+          <input class="input-field" type="password" placeholder="••••••••••••" style="flex:1;" id="new-password">
+          <button class="btn-ghost" onclick="generateAndFill()" style="white-space:nowrap; font-size:12px;">Generate</button>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-ghost" style="flex:1;" onclick="closeModal('modal-add')">Cancel</button>
+      <button class="btn-primary" style="flex:2;" onclick="closeModal('modal-add')">Save to Vault</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div id="modal-import" style="display:none;" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-import')">
+  <div class="modal">
+    <div style="font-size:18px; font-weight:700; color:#e2e8f0; margin-bottom:6px;">Import Passwords</div>
+    <p style="font-size:13px; color:#64748b; margin:0 0 20px;">Bring your entire password history into Hardcastle. All data is encrypted on import.</p>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
+      <div style="padding:14px; border-radius:10px; border:1px solid #1e293b; cursor:pointer; display:flex; align-items:center; gap:10px; transition:border 0.15s;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#1e293b'">
+        <span style="font-size:20px;">🌐</span><div><div style="font-size:13px; font-weight:500; color:#e2e8f0;">Google Chrome</div><div style="font-size:11px; color:#64748b;">Passwords › Export</div></div>
+      </div>
+      <div style="padding:14px; border-radius:10px; border:1px solid #1e293b; cursor:pointer; display:flex; align-items:center; gap:10px;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#1e293b'">
+        <span style="font-size:20px;">🔵</span><div><div style="font-size:13px; font-weight:500; color:#e2e8f0;">1Password</div><div style="font-size:11px; color:#64748b;">File › Export › CSV</div></div>
+      </div>
+      <div style="padding:14px; border-radius:10px; border:1px solid #1e293b; cursor:pointer; display:flex; align-items:center; gap:10px;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#1e293b'">
+        <span style="font-size:20px;">🔴</span><div><div style="font-size:13px; font-weight:500; color:#e2e8f0;">LastPass</div><div style="font-size:11px; color:#64748b;">Account › Export</div></div>
+      </div>
+      <div style="padding:14px; border-radius:10px; border:1px solid #1e293b; cursor:pointer; display:flex; align-items:center; gap:10px;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#1e293b'">
+        <span style="font-size:20px;">⚫</span><div><div style="font-size:13px; font-weight:500; color:#e2e8f0;">Bitwarden</div><div style="font-size:11px; color:#64748b;">Tools › Export</div></div>
+      </div>
+      <div style="padding:14px; border-radius:10px; border:1px solid #1e293b; cursor:pointer; display:flex; align-items:center; gap:10px;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#1e293b'">
+        <span style="font-size:20px;">🟢</span><div><div style="font-size:13px; font-weight:500; color:#e2e8f0;">Dashlane</div><div style="font-size:11px; color:#64748b;">My Account › Export</div></div>
+      </div>
+      <div style="padding:14px; border-radius:10px; border:1px solid #1e293b; cursor:pointer; display:flex; align-items:center; gap:10px;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#1e293b'">
+        <span style="font-size:20px;">📄</span><div><div style="font-size:13px; font-weight:500; color:#e2e8f0;">Generic CSV</div><div style="font-size:11px; color:#64748b;">Any CSV file</div></div>
+      </div>
+    </div>
+    <div style="border:2px dashed #1e293b; border-radius:10px; padding:24px; text-align:center; cursor:pointer; margin-bottom:16px;" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#1e293b'">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" style="display:block; margin:0 auto 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div style="font-size:14px; color:#64748b;">Drop your CSV file here or click to browse</div>
+      <div style="font-size:12px; color:#475569; margin-top:4px;">All data is encrypted on your device before being stored</div>
+    </div>
+    <button class="btn-ghost" style="width:100%;" onclick="closeModal('modal-import')">Cancel</button>
+  </div>
+</div>
+
+<!-- Add TOTP Modal -->
+<div id="modal-totp" style="display:none;" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-totp')">
+  <div class="modal">
+    <div style="font-size:18px; font-weight:700; color:#e2e8f0; margin-bottom:6px;">Add Authenticator Account</div>
+    <p style="font-size:13px; color:#64748b; margin:0 0 20px;">Add a 2FA account to your Hardcastle authenticator.</p>
+    <div style="display:grid; gap:14px; margin-bottom:20px;">
+      <div>
+        <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:6px;">Account Name</label>
+        <input class="input-field" placeholder="e.g. GitHub">
+      </div>
+      <div>
+        <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:6px;">Email / Username</label>
+        <input class="input-field" placeholder="you@example.com">
+      </div>
+      <div>
+        <label style="font-size:13px; color:#94a3b8; display:block; margin-bottom:6px;">Secret Key</label>
+        <input class="input-field" placeholder="Paste the key from the site's 2FA setup page">
+      </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-ghost" style="flex:1;" onclick="closeModal('modal-totp')">Cancel</button>
+      <button class="btn-primary" style="flex:2;" onclick="closeModal('modal-totp')">Add Account</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Screen navigation ─────────────────────────────────────────────────────────
+function goToVault() {
+  document.getElementById('screen-auth').style.display = 'none';
+  document.getElementById('screen-app').style.display = 'flex';
+}
+function goToAuth() {
+  document.getElementById('screen-app').style.display = 'none';
+  document.getElementById('screen-auth').style.display = 'flex';
+}
+function showPage(page) {
+  ['vault','security','authenticator','phone','settings'].forEach(p => {
+    const el = document.getElementById('page-' + p);
+    if (el) el.style.display = p === page ? 'block' : 'none';
+    const nav = document.getElementById('nav-' + p);
+    if (nav) {
+      nav.classList.toggle('active', p === page);
+      nav.style.color = p === page ? '#e2e8f0' : '#94a3b8';
+    }
+  });
+}
+function switchAuthTab(tab) {
+  document.getElementById('auth-login').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('auth-register').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────────
+function showAddModal() { document.getElementById('modal-add').style.display = 'flex'; }
+function showImportModal() { document.getElementById('modal-import').style.display = 'flex'; }
+function showRemediationModal() {
+  resetRemediation();
+  document.getElementById('modal-remediation').style.display = 'flex';
+}
+function showAddTOTPModal() { document.getElementById('modal-totp').style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+// ── Phone scan ────────────────────────────────────────────────────────────────
+function showPhoneScanResult() {
+  document.getElementById('phone-scan-result').style.display = 'block';
+}
+
+// ── Settings mode ─────────────────────────────────────────────────────────────
+function selectMode(mode) {
+  const auto = document.getElementById('mode-auto');
+  const sup = document.getElementById('mode-supervised');
+  if (mode === 'auto') {
+    auto.style.border = '2px solid #3b82f6';
+    auto.style.background = 'rgba(59,130,246,0.05)';
+    sup.style.border = '1px solid #1e293b';
+    sup.style.background = 'transparent';
+  } else {
+    sup.style.border = '2px solid #f59e0b';
+    sup.style.background = 'rgba(245,158,11,0.05)';
+    auto.style.border = '1px solid #1e293b';
+    auto.style.background = 'transparent';
+  }
+}
+
+// ── Password generator ────────────────────────────────────────────────────────
+function generateAndFill() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  let pw = '';
+  for (let i = 0; i < 20; i++) pw += chars[Math.floor(Math.random() * chars.length)];
+  const el = document.getElementById('new-password');
+  el.type = 'text';
+  el.value = pw;
+  setTimeout(() => el.type = 'password', 2000);
+}
+
+// ── AI Remediation simulation ─────────────────────────────────────────────────
+let remediationStep = 0;
+let remediationTimer = null;
+
+function resetRemediation() {
+  remediationStep = 0;
+  clearInterval(remediationTimer);
+  document.getElementById('remediation-prestart').style.display = 'block';
+  document.getElementById('remediation-running').style.display = 'none';
+  document.getElementById('remediation-done').style.display = 'none';
+  document.getElementById('captcha-intercept').style.display = 'none';
+}
+
+function startRemediation() {
+  document.getElementById('remediation-prestart').style.display = 'none';
+  document.getElementById('remediation-running').style.display = 'block';
+  remediationStep = 1;
+  runStep1();
+}
+
+const browserLogs = {
+  1: [
+    '> Navigating to accounts.google.com/security/password...',
+    '> Page loaded successfully',
+    '> Locating "Change password" form...',
+    '> Current password field found',
+    '> Generating new strong password: K#9mP2xL...',
+    '> Filling new password fields...',
+    '> Submitting password change...',
+    '> ✓ Password changed successfully',
+    '> Updating Hardcastle vault...',
+    '> ✓ Google vault entry updated'
+  ],
+  2: [
+    '> Navigating to facebook.com/settings/security...',
+    '> Page loaded successfully',
+    '> Locating password change section...',
+    '> ⚠ CAPTCHA detected — pausing for human verification',
+  ],
+  3: [
+    '> Navigating to twitter.com/settings/password...',
+    '> Page loaded successfully',
+    '> Locating password change form...',
+    '> Generating new strong password: Xv$7nQ3wR...',
+    '> Filling password fields...',
+    '> Submitting...',
+    '> ✓ Password changed successfully',
+    '> ✓ X / Twitter vault entry updated'
+  ]
+};
+
+function runStep1() {
+  const logEl = document.getElementById('browser-log');
+  const urlEl = document.getElementById('browser-url');
+  urlEl.textContent = 'accounts.google.com/security/password';
+  logEl.innerHTML = '';
+  let i = 0;
+  const logs = browserLogs[1];
+  remediationTimer = setInterval(() => {
+    if (i < logs.length) {
+      logEl.innerHTML += logs[i] + '<br>';
+      i++;
+    } else {
+      clearInterval(remediationTimer);
+      // Mark step 1 done
+      document.getElementById('step-1').className = 'remediation-step done';
+      document.getElementById('stepnum-1').className = 'step-num done';
+      document.getElementById('stepnum-1').innerHTML = '✓';
+      document.getElementById('step-1-badge').innerHTML = '<span class="badge-green">Fixed</span>';
+      document.getElementById('step-1-status').textContent = 'Password changed and vault updated';
+      // Activate step 2
+      document.getElementById('step-2').className = 'remediation-step active';
+      document.getElementById('stepnum-2').className = 'step-num active';
+      document.getElementById('step-2-badge').innerHTML = '<span class="badge-blue pulse">In Progress</span>';
+      document.querySelector('#step-2 div:nth-child(2) div:nth-child(1)').style.color = '#e2e8f0';
+      document.querySelector('#step-2 div:nth-child(2) div:nth-child(2)').textContent = 'Navigating to Facebook...';
+      setTimeout(runStep2, 800);
+    }
+  }, 350);
+}
+
+function runStep2() {
+  const logEl = document.getElementById('browser-log');
+  const urlEl = document.getElementById('browser-url');
+  urlEl.textContent = 'facebook.com/settings/security';
+  logEl.innerHTML = '';
+  let i = 0;
+  const logs = browserLogs[2];
+  remediationTimer = setInterval(() => {
+    if (i < logs.length) {
+      logEl.innerHTML += logs[i] + '<br>';
+      i++;
+    } else {
+      clearInterval(remediationTimer);
+      // Show CAPTCHA intercept
+      document.getElementById('captcha-intercept').style.display = 'block';
+      document.getElementById('step-2-badge').innerHTML = '<span class="badge-yellow">Needs You</span>';
+      document.querySelector('#step-2 div:nth-child(2) div:nth-child(2)').textContent = 'CAPTCHA required — your turn';
+    }
+  }, 400);
+}
+
+function completeCaptcha() {
+  document.getElementById('captcha-intercept').style.display = 'none';
+  const logEl = document.getElementById('browser-log');
+  logEl.innerHTML += '> ✓ CAPTCHA completed by user<br>> Resuming password change...<br>> Generating new strong password: Rz$5kW9mP...<br>> Filling password fields...<br>> Submitting...<br>> ✓ Password changed successfully<br>> ✓ Facebook vault entry updated<br>';
+  setTimeout(() => {
+    document.getElementById('step-2').className = 'remediation-step done';
+    document.getElementById('stepnum-2').className = 'step-num done';
+    document.getElementById('stepnum-2').innerHTML = '✓';
+    document.getElementById('step-2-badge').innerHTML = '<span class="badge-green">Fixed</span>';
+    // Activate step 3
+    document.getElementById('step-3').className = 'remediation-step active';
+    document.getElementById('stepnum-3').className = 'step-num active';
+    document.getElementById('step-3-badge').innerHTML = '<span class="badge-blue pulse">In Progress</span>';
+    document.querySelector('#step-3 div:nth-child(2) div:nth-child(1)').style.color = '#e2e8f0';
+    document.querySelector('#step-3 div:nth-child(2) div:nth-child(2)').textContent = 'Navigating to X / Twitter...';
+    setTimeout(runStep3, 800);
+  }, 1000);
+}
+
+function runStep3() {
+  const logEl = document.getElementById('browser-log');
+  const urlEl = document.getElementById('browser-url');
+  urlEl.textContent = 'twitter.com/settings/password';
+  logEl.innerHTML = '';
+  let i = 0;
+  const logs = browserLogs[3];
+  remediationTimer = setInterval(() => {
+    if (i < logs.length) {
+      logEl.innerHTML += logs[i] + '<br>';
+      i++;
+    } else {
+      clearInterval(remediationTimer);
+      document.getElementById('step-3').className = 'remediation-step done';
+      document.getElementById('stepnum-3').className = 'step-num done';
+      document.getElementById('stepnum-3').innerHTML = '✓';
+      document.getElementById('step-3-badge').innerHTML = '<span class="badge-green">Fixed</span>';
+      setTimeout(() => {
+        document.getElementById('remediation-running').style.display = 'none';
+        document.getElementById('remediation-done').style.display = 'block';
+      }, 1000);
+    }
+  }, 380);
+}
+
+// ── TOTP timer ────────────────────────────────────────────────────────────────
+let totpSeconds = 18;
+setInterval(() => {
+  totpSeconds--;
+  if (totpSeconds <= 0) {
+    totpSeconds = 30;
+    const codes = ['483 291','719 043','256 817','384 920','671 503','829 147'];
+    document.getElementById('totp-google').textContent = codes[Math.floor(Math.random() * codes.length)];
+  }
+  const el = document.getElementById('totp-timer-text');
+  if (el) el.textContent = totpSeconds + 's';
+}, 1000);
+</script>
+</body>
+</html>
