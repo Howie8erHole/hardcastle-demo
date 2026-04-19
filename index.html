@@ -255,7 +255,7 @@ tailwind.config = {
     <div style="max-width:900px; margin:0 auto; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:32px;">
       <div style="display:flex; align-items:center; gap:10px;">
         <div style="width:36px; height:36px; background:rgba(16,185,129,0.15); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">🏝️</div>
-        <div><div style="font-size:13px; font-weight:600; color:#e2e8f0;">Built in Molokai, Hawaii</div><div style="font-size:11px; color:#64748b;">UHMC · ASSESS LLC</div></div>
+        <div><div style="font-size:13px; font-weight:600; color:#e2e8f0;">Built on Molokai, Hawaii</div><div style="font-size:11px; color:#64748b;">UHMC · ASSESS LLC</div></div>
       </div>
       <div style="display:flex; align-items:center; gap:10px;">
         <div style="width:36px; height:36px; background:rgba(59,130,246,0.15); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px;">🔒</div>
@@ -377,7 +377,7 @@ tailwind.config = {
             <div style="font-size:14px; font-weight:600; color:#3b82f6; text-transform:uppercase; letter-spacing:0.05em;">Pro</div>
             <span class="badge-blue">Most Popular</span>
           </div>
-          <div style="font-size:40px; font-weight:800; color:#e2e8f0; margin-bottom:4px;">$3<span style="font-size:16px; font-weight:400; color:#64748b;">/mo</span></div>
+          <div style="font-size:40px; font-weight:800; color:#e2e8f0; margin-bottom:4px;">$7<span style="font-size:16px; font-weight:400; color:#64748b;">/mo</span></div>
           <p style="font-size:13px; color:#64748b; margin:0 0 24px;">Full AI automation, unlimited everything.</p>
           <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:28px;">
             <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:#94a3b8;"><span style="color:#10b981;">✓</span> Unlimited vault items</div>
@@ -404,7 +404,7 @@ tailwind.config = {
         <button class="btn-gold" style="padding:12px 24px; font-size:15px; white-space:nowrap;" onclick="joinWaitlist()">Join Now →</button>
       </div>
       <div id="waitlist-confirm" style="display:none; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:14px; font-size:14px; color:#10b981; margin-top:12px;">
-        ✓ You're on the list! We'll reach out when your spot is ready.
+        ✓ Your email client should have opened — send that email to lock in your spot. If it didn't open, email <strong>jonathan@hardcastleapp.com</strong> directly.
       </div>
       <p style="font-size:12px; color:#334155; margin:12px 0 0;">No spam. Unsubscribe anytime. Built by Jonathan Butler · ASSESS LLC</p>
     </div>
@@ -1632,6 +1632,16 @@ function joinWaitlist() {
     setTimeout(() => { document.getElementById('waitlist-email').style.borderColor = '#334155'; }, 2000);
     return;
   }
+  // Open mailto with pre-filled subject so the email lands directly in Jonathan's inbox
+  const subject = encodeURIComponent('Hardcastle Waitlist — ' + email);
+  const body = encodeURIComponent('Hi Jonathan,
+
+I'd like to join the Hardcastle beta waitlist.
+
+My email: ' + email + '
+
+Looking forward to hearing more!');
+  window.location.href = 'mailto:jonathan@hardcastleapp.com?subject=' + subject + '&body=' + body;
   document.getElementById('waitlist-confirm').style.display = 'block';
   document.getElementById('waitlist-email').value = '';
 }
