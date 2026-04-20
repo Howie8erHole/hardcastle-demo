@@ -211,12 +211,12 @@ tailwind.config = {
         <div class="how-card">
           <div style="font-size:36px; margin-bottom:16px;">🔔</div>
           <div style="font-size:16px; font-weight:700; color:#e2e8f0; margin-bottom:10px;">1. Breach Detected</div>
-          <p style="font-size:13px; color:#64748b; margin:0; line-height:1.6;">Hardcastle monitors your vault 24/7 and sends a system notification the moment any credentials appear in a known data breach.</p>
+          <p style="font-size:13px; color:#64748b; margin:0; line-height:1.6;">Hardcastle checks your credentials against known breach databases and notifies you the moment any of your passwords are found in a data breach.</p>
         </div>
         <div class="how-card">
           <div style="font-size:36px; margin-bottom:16px;">🤖</div>
-          <div style="font-size:16px; font-weight:700; color:#e2e8f0; margin-bottom:10px;">2. AI Takes Action</div>
-          <p style="font-size:13px; color:#64748b; margin:0; line-height:1.6;">One click. Hardcastle's AI opens its built-in sandboxed browser, navigates to the compromised site, logs in, and changes your password automatically.</p>
+          <div style="font-size:16px; font-weight:700; color:#e2e8f0; margin-bottom:10px;">2. You Start a Guided Session</div>
+          <p style="font-size:13px; color:#64748b; margin:0; line-height:1.6;">You tap "Start guided remediation" and Hardcastle opens its built-in sandboxed browser. The AI navigates to the site, logs in, and executes the password change while you watch — pausing whenever your input is needed.</p>
         </div>
         <div class="how-card">
           <div style="font-size:36px; margin-bottom:16px;">✅</div>
@@ -589,7 +589,7 @@ tailwind.config = {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <span style="font-size:13px; color:#ef4444; font-weight:500;" id="compromised-banner-text">3 compromised passwords detected</span>
           </div>
-          <button class="btn-danger" style="font-size:12px; padding:6px 14px;" onclick="showRemediationModal()">Fix All with AI</button>
+          <button class="btn-danger" style="font-size:12px; padding:6px 14px;" onclick="showRemediationModal()">Start Guided Remediation</button>
         </div>
 
         <!-- Items -->
@@ -1059,7 +1059,7 @@ tailwind.config = {
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <div style="font-size:20px; font-weight:700; color:#e2e8f0; margin-bottom:8px;">Phone Number Updated!</div>
-            <p style="font-size:14px; color:#64748b; margin:0 0 20px;">All 6 accounts have been updated to your new number. Your vault record has been updated automatically.</p>
+            <p style="font-size:14px; color:#64748b; margin:0 0 20px;">All 6 accounts have been updated to your new number. Your vault record has been updated.</p>
             <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:24px;">
               <div style="background:#1e293b; border-radius:8px; padding:12px; text-align:center;">
                 <div style="font-size:20px; font-weight:700; color:#10b981;">6</div>
@@ -1229,7 +1229,7 @@ tailwind.config = {
       </div>
       <div>
         <div style="font-size:18px; font-weight:700; color:#e2e8f0;">AI Remediation</div>
-        <div style="font-size:13px; color:#64748b;">Hardcastle will fix your compromised passwords automatically</div>
+        <div style="font-size:13px; color:#64748b;">Walk through fixing your compromised passwords with AI guidance</div>
       </div>
     </div>
 
@@ -1253,7 +1253,7 @@ tailwind.config = {
             <div style="width:16px; height:16px; border-radius:50%; background:#3b82f6; flex-shrink:0;"></div>
             <div>
               <div style="font-size:13px; font-weight:600; color:#e2e8f0;">Auto Mode</div>
-              <div style="font-size:12px; color:#64748b;">Hardcastle handles everything. You only step in for CAPTCHAs.</div>
+              <div style="font-size:12px; color:#64748b;">Hardcastle executes the password change while you watch. Pauses for CAPTCHAs, 2FA prompts, or any step that needs your input.</div>
             </div>
           </div>
           <div style="padding:12px; border-radius:8px; border:1px solid #1e293b; display:flex; align-items:center; gap:10px; cursor:pointer;" id="rem-mode-supervised" onclick="selectRemMode('supervised')">
@@ -1396,7 +1396,7 @@ tailwind.config = {
       </div>
       <div>
         <div style="font-size:16px; font-weight:700; color:#e2e8f0;" id="single-rem-title">Fix Google Password</div>
-        <div style="font-size:12px; color:#64748b;" id="single-rem-subtitle">AI will navigate to the site and change your password automatically</div>
+        <div style="font-size:12px; color:#64748b;" id="single-rem-subtitle">Hardcastle will open the site in its sandboxed browser and guide you through the password change</div>
       </div>
     </div>
 
@@ -1616,13 +1616,7 @@ function joinWaitlist() {
   }
   // Open mailto with pre-filled subject so the email lands directly in Jonathan's inbox
   const subject = encodeURIComponent('Hardcastle Waitlist — ' + email);
-  const body = encodeURIComponent('Hi Jonathan,
-
-I'd like to join the Hardcastle beta waitlist.
-
-My email: ' + email + '
-
-Looking forward to hearing more!');
+  const body = encodeURIComponent(`Hi Jonathan,\n\nI'd like to join the Hardcastle beta waitlist.\n\nMy email: ` + email + `\n\nLooking forward to hearing more!`);
   window.location.href = 'mailto:jonathan@hardcastleapp.com?subject=' + subject + '&body=' + body;
   document.getElementById('waitlist-confirm').style.display = 'block';
   document.getElementById('waitlist-email').value = '';
@@ -2437,23 +2431,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('screen-app').style.display = 'none';
 
   // Animate stats counters
-  function animateCounter(id, target, suffix, duration) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    let start = 0;
-    const step = target / (duration / 16);
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= target) { start = target; clearInterval(timer); }
-      el.textContent = Math.floor(start).toLocaleString() + (suffix || '');
-    }, 16);
-  }
-  setTimeout(() => {
-    animateCounter('stat-breaches', 12847, '', 2000);
-    animateCounter('stat-accounts', 3291, '', 2200);
-    animateCounter('stat-time', 47, 's', 1500);
-    animateCounter('stat-sites', 500, '+', 1800);
-  }, 400);
+  // Stat counters removed: no fabricated statistics displayed as live data.
 });
 </script>
 </body>
